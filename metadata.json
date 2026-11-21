@@ -1,0 +1,6 @@
+{
+  "name": "DemoCoin Wallet",
+  "description": "Send, Receive, aur Manage Demo Coins easily — A secure P2P DemoCoin wallet for creating wallets, transferring coins, and tracking transactions.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
