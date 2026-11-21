@@ -1,4 +1,6 @@
+import { Capacitor } from '@capacitor/core';
 import type { PeerSummary, TransactionRecord, WalletDashboardData } from '../types/wallet';
+import { nativeLedgerApi } from './nativeLedger';
 
 export interface AuthResponse {
   token: string;
@@ -14,8 +16,14 @@ export class ApiError extends Error {
   }
 }
 
+const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/+$/, '') || '';
+
+function useNativeStandalone(): boolean {
+  return Capacitor.isNativePlatform() && !API_BASE;
+}
+
 async function requestJson<T>(
-  url: string,
+  path: string,
   options: RequestInit = {},
   token?: string | null,
 ): Promise<T> {
@@ -27,7 +35,7 @@ async function requestJson<T>(
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  const res = await fetch(url, {
+  const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers,
   });
@@ -46,6 +54,7 @@ export function createWallet(payload: {
   passphrase: string;
   pin: string;
 }): Promise<AuthResponse> {
+  if (useNativeStandalone()) return nativeLedgerApi.createWallet(payload);
   return requestJson<AuthResponse>('/api/auth/register', {
     method: 'POST',
     body: JSON.stringify(payload),
@@ -56,6 +65,7 @@ export function loginWallet(payload: {
   identifier: string;
   passphrase: string;
 }): Promise<AuthResponse> {
+  if (useNativeStandalone()) return nativeLedgerApi.loginWallet(payload);
   return requestJson<AuthResponse>('/api/auth/login', {
     method: 'POST',
     body: JSON.stringify(payload),
@@ -68,6 +78,7 @@ export function recoverWallet(payload: {
   newPassphrase: string;
   newPin: string;
 }): Promise<AuthResponse> {
+  if (useNativeStandalone()) return nativeLedgerApi.recoverWallet(payload);
   return requestJson<AuthResponse>('/api/auth/recover', {
     method: 'POST',
     body: JSON.stringify(payload),
@@ -75,10 +86,12 @@ export function recoverWallet(payload: {
 }
 
 export function fetchDashboard(token: string): Promise<WalletDashboardData> {
+  if (useNativeStandalone()) return nativeLedgerApi.fetchDashboard(token);
   return requestJson<WalletDashboardData>('/api/wallet/me', { method: 'GET' }, token);
 }
 
 export function lookupPeer(token: string, query: string): Promise<{ peer: PeerSummary }> {
+  if (useNativeStandalone()) return nativeLedgerApi.lookupPeer(token, query);
   return requestJson<{ peer: PeerSummary }>(
     `/api/wallet/lookup?q=${encodeURIComponent(query)}`,
     { method: 'GET' },
@@ -90,6 +103,7 @@ export function sendTransfer(
   token: string,
   payload: { recipient: string; amount: number; memo: string; pin: string },
 ): Promise<{ transaction: TransactionRecord; dashboard: WalletDashboardData }> {
+  if (useNativeStandalone()) return nativeLedgerApi.sendTransfer(token, payload);
   return requestJson<{ transaction: TransactionRecord; dashboard: WalletDashboardData }>(
     '/api/transfers/send',
     {
@@ -103,6 +117,7 @@ export function sendTransfer(
 export function claimFaucet(
   token: string,
 ): Promise<{ transaction: TransactionRecord; dashboard: WalletDashboardData }> {
+  if (useNativeStandalone()) return nativeLedgerApi.claimFaucet(token);
   return requestJson<{ transaction: TransactionRecord; dashboard: WalletDashboardData }>(
     '/api/wallet/faucet',
     { method: 'POST' },
@@ -120,6 +135,7 @@ export function updateSecuritySettings(
     newPin?: string;
   },
 ): Promise<{ dashboard: WalletDashboardData }> {
+  if (useNativeStandalone()) return nativeLedgerApi.updateSecuritySettings(token, payload);
   return requestJson<{ dashboard: WalletDashboardData }>(
     '/api/wallet/security',
     {
@@ -131,5 +147,7 @@ export function updateSecuritySettings(
 }
 
 export function revokeAllSessions(token: string): Promise<{ ok: boolean }> {
+  if (useNativeStandalone()) return nativeLedgerApi.revokeAllSessions(token);
   return requestJson<{ ok: boolean }>('/api/auth/logout-all', { method: 'POST' }, token);
 }
+
